@@ -10,6 +10,8 @@
 ssReplaceVisual = {}
 g_seasons.replaceVisual = ssReplaceVisual
 
+ssReplaceVisual.VSEASON_SNOW = 4
+
 function ssReplaceVisual:preLoad()
     Placeable.finalizePlacement = Utils.appendedFunction(Placeable.finalizePlacement, ssReplaceVisual.placeableUpdatePlacableOnCreation)
 end
@@ -25,6 +27,7 @@ end
 function ssReplaceVisual:loadMap(name)
     if g_currentMission:getIsClient() then
         g_currentMission.environment:addDayChangeListener(self)
+        g_currentMission.environment:addWeatherChangeListener(self)
 
         self:loadFromXML()
 
@@ -70,7 +73,8 @@ function ssReplaceVisual:loadTextureReplacementsFromXMLFile(path)
         ["spring"] = 0,
         ["summer"] = 1,
         ["autumn"] = 2,
-        ["winter"] = 3
+        ["winter"] = 3,
+        ["snow"] = 4
     }
 
     -- Load properties
@@ -175,6 +179,14 @@ function ssReplaceVisual:update(dt)
 end
 
 function ssReplaceVisual:dayChanged()
+    self:refreshTextures()
+end
+
+function ssReplaceVisual:weatherChanged()
+    self:refreshTextures()
+end
+
+function ssReplaceVisual:refreshTextures()
     if g_currentMission:getIsClient() then
         local newVisuals = self:getVisualSeason()
 
@@ -349,7 +361,13 @@ function ssReplaceVisual:updateTextures(visualSeason, nodeId)
 
     local nodeName = getName(nodeId)
 
-    if self.textureReplacements[visualSeason][nodeName] ~= nil then
+    -- Default for snow to winter trees
+    local replacement = self.textureReplacements[visualSeason][nodeName]
+    if replacement == nil and visualSeason == ssReplaceVisual.VSEASON_SNOW then
+        replacement = self.textureReplacements[g_seasons.environment.SEASON_WINTER][nodeName]
+    end
+
+    if replacement ~= nil then
         -- If there is a texture for this season and node, set it
         for secondaryNodeName, secondaryNodeTable in pairs(self.textureReplacements[visualSeason][getName(nodeId)]) do
             if secondaryNodeName == "" then
